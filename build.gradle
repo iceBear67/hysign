@@ -19,7 +19,13 @@ dependencies {
     implementation 'com.github.steveice10:mcprotocollib:1.19-1'
     implementation "net.kyori:adventure-text-serializer-plain:4.11.0"
 }
-
+shadowJar {
+    manifest {
+        attributes(Map.of(
+                'Main-Class', 'io.ib67.hysign.Start'
+        ))
+    }
+}
 test {
     useJUnitPlatform()
 }
