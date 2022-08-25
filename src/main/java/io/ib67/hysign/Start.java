@@ -47,7 +47,7 @@ public class Start {
 
     private void run() {
         Path mcAcces = Path.of(MINECRAFT_ACCES_TOKEN);
-        if(Files.exists(mcAcces)){
+        if (Files.exists(mcAcces)) {
             try {
                 var jo = JSON.parse(Files.readString(mcAcces)).getAsJsonObject();
                 accessToken = jo.get("token").getAsString();
@@ -55,11 +55,32 @@ public class Start {
                 throw new RuntimeException(e);
             }
         }
-        if(!checkProfile(accessToken)){
+        if (!checkProfile(accessToken)) {
             auth();
         }
+        log.info("Checking if [" + mc_usrName + "] is online..");
+        if (checkOnline()) {
+            log.warning(mc_usrName + " is ONLINE! Exiting...");
+            return;
+        }
         log.info("Logging into Hypixel...");
-        new Bot(accessToken, new GameProfile(fixUUID(mc_uuid), mc_usrName));
+        new Bot(accessToken, new GameProfile(fixUUID(mc_uuid), mc_usrName), http).run();
+    }
+
+    private boolean checkOnline() {
+        var req = HttpRequest.newBuilder(URI.create("https://hypixel.paniek.de/player/" + mc_uuid + "/status.json"))
+                .header("Accept", "application/json")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; rv:103.0) Gecko/20100101 Firefox/103.0")
+                .GET().build();
+        try {
+            var resp = JSON.parse(http.send(req, ofString()).body()).getAsJsonObject();
+            if (resp.has("status") && !resp.get("status").isJsonNull() && resp.getAsJsonObject("status").get("online").getAsBoolean()) {
+                return true;
+            }
+            return false;
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Can't connect to online checker! " + e);
+        }
     }
 
     private String fixUUID(String mc_uuid) {
@@ -74,7 +95,7 @@ public class Start {
                 mc_uuid.substring(8 + 4 + 4 + 4, 8 + 4 + 4 + 4 + 12);
     }
 
-    private void auth(){
+    private void auth() {
         // load mc token
         readXBOXAccessTokenFromCache();
         if (!checkXBOXAccessToken(accessToken)) {
@@ -170,12 +191,13 @@ public class Start {
             }
         }
         log.info("Checking for profiles...");
-        if(!checkProfile(accessToken)){
+        if (!checkProfile(accessToken)) {
             throw new RuntimeException("Can't fetch profile! Did you purchased minecraft yet?");
         }
     }
-    private boolean checkProfile(String accessToken){
-        if (accessToken == null){
+
+    private boolean checkProfile(String accessToken) {
+        if (accessToken == null) {
             return false;
         }
         var req = HttpRequest.newBuilder(URI.create(MINECRAFT_PROFILES))
@@ -191,14 +213,15 @@ public class Start {
 
             log.info("[" + name + "/" + id + "] Logged in!");
             var jo = new JsonObject();
-            jo.addProperty("token",accessToken);
-            jo.addProperty("time",System.currentTimeMillis());
+            jo.addProperty("token", accessToken);
+            jo.addProperty("time", System.currentTimeMillis());
             Files.writeString(Path.of(MINECRAFT_ACCES_TOKEN), jo.toString());
             return true;
         } catch (IOException | InterruptedException e) {
             return false;
         }
     }
+
     private void checkGameOwnership(String accessToken) throws IOException, InterruptedException {
         var req = HttpRequest.newBuilder(URI.create("https://api.minecraftservices.com/entitlements/mcstore"))
                 .header("Authorization", "Bearer " + accessToken)
@@ -233,7 +256,7 @@ public class Start {
                 .build();
         var body = http.send(request, ofString()).body();
         var resp = requireNonNull(GSON.fromJson(body, RespRefresh.class));
-        requireNonNull(Env.accessToken = resp.getAccessToken());
+        requireNonNull(Env.accessToken = resp.accessToken());
         Files.writeString(Path.of(XBOX_ACCES_TOKEN), accessToken);
     }
 
