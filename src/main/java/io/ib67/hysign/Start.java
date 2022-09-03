@@ -51,6 +51,13 @@ public class Start {
             try {
                 var jo = JSON.parse(Files.readString(mcAcces)).getAsJsonObject();
                 accessToken = jo.get("token").getAsString();
+                var time = jo.get("time").getAsLong();
+                if (System.currentTimeMillis() - time > 80000 * 60 * 1000) { // update it.
+                    accessToken = null;
+                    log.warning("Invalidating outdated access tokens...");
+                    Files.deleteIfExists(mcAcces);
+                    Files.deleteIfExists(Path.of(XBOX_ACCES_TOKEN));
+                }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -204,7 +211,8 @@ public class Start {
                 .header("Authorization", "Bearer " + accessToken)
                 .GET().build();
         try {
-            var resp = JSON.parse(http.send(req, ofString()).body()).getAsJsonObject();
+            var _raw = http.send(req, ofString()).body();
+            var resp = JSON.parse(_raw).getAsJsonObject();
             var name = resp.get("name").getAsString();
             var id = resp.get("id").getAsString();
 
@@ -256,7 +264,7 @@ public class Start {
                 .build();
         var body = http.send(request, ofString()).body();
         var resp = requireNonNull(GSON.fromJson(body, RespRefresh.class));
-        requireNonNull(Env.accessToken = resp.accessToken());
+        requireNonNull(Env.accessToken = resp.accessToken);
         Files.writeString(Path.of(XBOX_ACCES_TOKEN), accessToken);
     }
 

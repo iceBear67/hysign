@@ -2,22 +2,12 @@ package io.ib67.hysign.auth;
 
 import com.google.gson.annotations.SerializedName;
 
-public record RespRefresh(@SerializedName("expires_in") int expiresIn,
-                          @SerializedName("access_token") String accessToken,
-                          @SerializedName("refresh_token") String refreshToken) {
+public final class RespRefresh {
+    @SerializedName("access_token")
+    public String accessToken;
+    @SerializedName("expires_in")
+    int expiresIn;
+    @SerializedName("refresh_token")
+    String refreshToken;
 
-    @Override
-    public int expiresIn() {
-        return expiresIn;
-    }
-
-    @Override
-    public String refreshToken() {
-        return refreshToken;
-    }
-
-    @Override
-    public String accessToken() {
-        return accessToken;
-    }
 }
